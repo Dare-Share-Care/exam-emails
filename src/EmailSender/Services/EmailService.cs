@@ -7,14 +7,14 @@ namespace EmailSender.Services
 {
     public class EmailService
     {
-        public async Task SendEmailAsync(EmailDto dto, string username, string password)
+        public async Task SendEmailAsync(EmailDto dto, string mail, string trap)
         {
             try
             {
                 using var client = new SmtpClient();
 
                 await client.ConnectAsync("sandbox.smtp.mailtrap.io", 2525, useSsl: false);
-                await client.AuthenticateAsync(username, password);
+                await client.AuthenticateAsync(mail, trap);
 
                 var bodyBuilder = new BodyBuilder()
                 {
@@ -23,7 +23,7 @@ namespace EmailSender.Services
 
                 var email = new MimeMessage()
                 {
-                    From = { new MailboxAddress("From", dto.From) },
+                    From = { new MailboxAddress("From", "mtogobot@gmail.com") },
                     To = { new MailboxAddress("To", dto.To) },
                     Subject = dto.Subject,
                     Body = bodyBuilder.ToMessageBody()

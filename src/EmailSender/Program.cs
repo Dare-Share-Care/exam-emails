@@ -1,82 +1,81 @@
-﻿using Confluent.Kafka;
-using System.Text.Json;
+﻿using System.Text.Json;
+using Confluent.Kafka;
+using EmailSender.Interfaces;
 using EmailSender.Models.Dto;
 using EmailSender.Services;
-using DotNetEnv;
+using Org.BouncyCastle.Asn1.Esf;
 
 namespace EmailSender
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             //Load .env file
             DotNetEnv.Env.Load();
-            
-            var cts = new CancellationTokenSource();
 
             // Kafka consumer configuration
             var config = new ConsumerConfig
             {
-                BootstrapServers = "kafka:9093",
-                GroupId = "email_group_id",
-                AutoOffsetReset = AutoOffsetReset.Earliest
+                BootstrapServers = "localhost:9092",
+                GroupId = "email_group_group",
+                AutoOffsetReset = AutoOffsetReset.Latest
             };
+            using var c = new ConsumerBuilder<Ignore, string>(config).Build();
+            c.Subscribe("mtogo-send-email");
 
-            using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
-            consumer.Subscribe("mtogo-send-email");
-
+            var cts = new CancellationTokenSource();
             Console.CancelKeyPress += (_, e) =>
             {
-                e.Cancel = true;
+                e.Cancel = true; // prevent the process from terminating.
                 cts.Cancel();
             };
-
             try
             {
                 while (true)
                 {
                     try
                     {
-                        var consumeResult = consumer.Consume(cts.Token);
-
+                        var cr = c.Consume(cts.Token);
                         // Process the received message
-                        var emailDetails = JsonSerializer.Deserialize<EmailDto>(consumeResult.Message.Value);
+                        var emailDetails = JsonSerializer.Deserialize<EmailDto>(cr.Value);
 
                         var emailDto = new EmailDto
                         {
-                            From = emailDetails.From,
                             To = emailDetails.To,
                             Subject = emailDetails.Subject,
                             Body = emailDetails.Body
                         };
-
-
+                        
                         var emailService = new EmailService();
-
+                        
+                        const string mail = "8ffae84449bb32";
+                        const string trap = "0bd2bb5c971229";
+                        
                         //Send email
+                        await emailService.SendEmailAsync(emailDto, mail, trap);
                         
-                        //Get mailtrap credentials
-                        var username = Environment.GetEnvironmentVariable("USERNAME")!;
-                        var password = Environment.GetEnvironmentVariable("PASSWORD")!;
 
-                        
-                        // emailService.SendEmailAsync(emailDto).GetAwaiter().GetResult();
-                        Console.WriteLine("Email sent successfully!");
+                        Console.WriteLine($"Sending email.");
                     }
                     catch (ConsumeException e)
                     {
                         Console.WriteLine($"Error occurred: {e.Error.Reason}");
+                        // Log the full exception details for debugging purposes
+                        Console.WriteLine($"Exception details: {e}");
                     }
-                    catch (Exception ex)
+                    catch (OperationCanceledException)
                     {
-                        Console.WriteLine($"Error: {ex.Message}");
+                        // Log cancellation of the operation (optional)
+                        Console.WriteLine("Operation was cancelled.");
+                        // Ensure the consumer leaves the group cleanly and final offsets are committed.
+                        c.Close();
                     }
                 }
             }
-            catch (OperationCanceledException)
+            catch (Exception ex)
             {
-                consumer.Close();
+                Console.WriteLine($"An unexpected error occurred: {ex}");
             }
         }
     }
