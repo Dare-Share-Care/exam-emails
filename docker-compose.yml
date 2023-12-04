@@ -2,11 +2,11 @@
 
 services:
   mtogo.orders:
-    container_name: mtogo-orders
-    image: mtogo.orders
+    container_name: mtogo-emails
+    image: mtogo.emails
     build:
       context: .
-      dockerfile: src/Orders.Web/Dockerfile
+      dockerfile: src/EmailSender/Dockerfile
     ports:
       - "8087:80"
     networks:
