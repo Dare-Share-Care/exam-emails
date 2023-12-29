@@ -1,9 +1,7 @@
 ﻿using System.Text.Json;
 using Confluent.Kafka;
-using EmailSender.Interfaces;
 using EmailSender.Models.Dto;
 using EmailSender.Services;
-using Org.BouncyCastle.Asn1.Esf;
 
 namespace EmailSender
 {
@@ -17,7 +15,7 @@ namespace EmailSender
             // Kafka consumer configuration
             var config = new ConsumerConfig
             {
-                BootstrapServers = "localhost:9092",
+                BootstrapServers = "kafka:9093",
                 GroupId = "email_group_group",
                 AutoOffsetReset = AutoOffsetReset.Latest
             };
